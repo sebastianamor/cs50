@@ -1,65 +1,42 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-int main(int argc, char *argv[])
+// Create a new individual with `generations`
+person *create_family(int generations)
 {
-
-    if (argc != 2)
+    // Allocate memory for new person
+    person *p = malloc(sizeof(person));
+    if (p == NULL)
     {
-        printf("Usage: ./recover FILE\n");
-        return 1;
+        exit(1);
     }
 
-    // Open the memory card
-    FILE *card = fopen(argv[1], "r");
-    if (card == NULL)
+    // If there are still generations left to create
+    if (generations > 1)
     {
-        printf("Could not open file.\n");
-        return 1;
-    }
+        // Create two new parents for current person by recursively calling create_family
+        person *parent0 = create_family(generations - 1);
+        person *parent1 = create_family(generations - 1);
 
-    uint8_t buffer[512];
+        // Set parent pointers for current person
+        p->parents[0] = parent0;
+        p->parents[1] = parent1;
 
-    FILE *img = NULL;
-    int count = 0;
-    char filename[8];
+        // Randomly assign current person's alleles based on the alleles of their parents
+        // Each parent contributes one random allele to the child
+        p->alleles[0] = parent0->alleles[random() % 2];
+        p->alleles[1] = parent1->alleles[random() % 2];
+    }   
 
-    while (fread(buffer, 1, 512, card) == 512)
+    // If there are no generations left to create (base case)
+    else
     {
+        // Set parent pointers to NULL
+        p->parents[0] = NULL;
+        p->parents[1] = NULL;
 
-        if (buffer[0] == 0xff && buffer[1] == 0xd8 && buffer[2] == 0xff &&
-            (buffer[3] & 0xf0) == 0xe0)
-        {
+        // Randomly assign alleles for the oldest generation
+        p->alleles[0] = random_allele();
+        p->alleles[1] = random_allele();
+    }   
 
-            if (img != NULL)
-            {
-                fclose(img);
-                img = NULL;
-            }
-
-            sprintf(filename, "%03i.jpg", count);
-            img = fopen(filename, "w");
-            if (img == NULL)
-            {
-                printf("Could not create output file.\n");
-                fclose(card);
-                return 1;
-            }
-            count++;
-        }
-
-        if (img != NULL)
-        {
-            fwrite(buffer, 1, 512, img);
-        }
-    }
-
-    if (img != NULL)
-    {
-        fclose(img);
-    }
-    fclose(card);
-
-    return 0;
+    // Return newly created person
+    return p;
 }
